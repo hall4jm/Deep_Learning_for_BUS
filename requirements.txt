@@ -1,0 +1,23 @@
+# Core deep learning
+fastai==2.4
+torch>=1.7.0,<1.11.0
+torchvision>=0.8.0,<0.12.0
+
+# Hyperparameter optimization
+optuna>=2.10.0,<3.0.0
+
+# Experiment tracking
+neptune-client[optuna]>=0.14.0
+neptune-client[fastai]==2.4
+
+# Model interpretation
+lime>=0.2.0
+scikit-image>=0.18.0
+
+# Plotting / numerics
+matplotlib>=3.3.0
+numpy>=1.19.0
+Pillow>=8.0.0
+
+# Notebook deps (model_interpretation.ipynb uses keras image utils)
+tensorflow>=2.4.0

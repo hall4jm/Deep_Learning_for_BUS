@@ -1,131 +1,221 @@
-# Introduction
-The aim of this project was to utilize current state-of-the-art CNN architectures for use in a pilot study to examine the ability of these algorithms to aid in the classification of breast cancer in breast ultrasounds (BUS) images. The training script included allows for an easy way using fastAI to train and test model architectures.
+# Breast Ultrasound CAD — CNN Classification with Hyperparameter Search & Interpretability
 
-The script also performs hyperparameter tuning using Tree-structured Parzen Estimator with hyperparameters that can be set in the configuration file passed to the Python script.
+> Deep-learning pilot study comparing modern CNN architectures for benign-vs-malignant classification of breast ultrasound (BUS) images, with automated hyperparameter tuning and post-hoc model interpretation.
 
-The python scripts can be run from the Python console or a Jupyter notebook. 
-
-### Example 
-
-The model and hyperparameter tuning options are stored in a JSON file and passed to the Python console along with the training script.
-
-![image](https://user-images.githubusercontent.com/46795053/145736141-c80eac5c-38f1-47d8-8f82-b6636ceaa6bc.png)
-
-# Background 
-According to a recent study, breast cancer now affects more people globally than any 
-other form of cancer (Breast cancer now most common form of cancer: WHO taking action, 
-2021). It is estimated that over 280,000 new cases will be diagnosed in the United States alone in 
-2021, resulting in over 43,000 deaths (U.S. Breast Cancer Statistics, 2021). A critical factor in 
-reducing the number of mortalities is ensuring that potentially life-threatening lesions are found 
-early (Sun et al., 2017). By finding these lesions early, patients have access to more treatment 
-options when they are most effective.
-
-To aid in early detection, doctors recommend regular mammograms or physical 
-examinations to help identify abnormalities in breast tissue (Breast Cancer Early Detection and 
-Diagnosis, 2021). Another common alternative is the use of ultrasound imaging. Breast 
-ultrasounds offer a non-radioactive imaging technique, allowing for a safe and non-invasive way 
-to assess any conspicuous masses and limiting the need for unnecessary surgery or invasive 
-procedures such as a biopsy.
-
-### BUS Interpretation
-Advancements in medical imaging have greatly improved the level of diagnostics that 
-can be recorded. These advancements allow radiologists to get a detailed view of breast tissues 
-and vascularity, allowing for more accurate diagnoses and better patient care. Despite these 
-developments, the interpretations of breast ultrasounds still rely heavily on the experience and 
-judgment of radiologists to define characteristics found in the images. Many features described 
-in the BI-RAD assessment can be found in benign and malignant lesions. The subjectivity of 
-these characteristics can lead to wildly varying assessments across radiologists.
-
-Because BUS images are often a determining factor for the need for a biopsy, low 
-sensitivity in identifying malignant lesions results in unnecessary procedures. The user-reliant 
-classification of BUS imaging results in non-uniform patient care. Studies show the percentage of positive breast ultrasound biopsies varies as 
-much as 51%. For many patients, this means unnecessary invasive procedures and increased 
-medical costs. 
-
-Many academic studies have shown the success of deep learning algorithms to 
-assist in classifying and detecting disease in medical images. Still, these algorithms have not 
-done well to generalize to a clinical setting. This study aims to create a state-of-the-art computer aided diagnosis (CAD) system to create a more standardized approach to assessing BUS images and assigning a diagnosis.
-
-# Methodology
-
-### Data Augmentations
-
-A common problem with deep learning architectures is their ability to memorize instead 
-of "learning," making them unable to generalize to new data. With the small amount of training 
-data, it became essential to incorporate techniques to reduce overfitting. By randomly selecting 
-images during each training step to be altered via rotations, reflections, added noise, Etc., we can 
-help the models become more robust. We implemented two different augmentation strategies to 
-help avoid overfitting on our BUS images. 
-
-The first augmentation strategy uses geometric transformations, image resizing, and 
-zooming. The geometric transformations used on our dataset could not be chosen without some 
-considerations. Depending on the transformations applied, the final classification may be altered, 
-or the image may no longer make sense in the domain of BUS images. For example, BUS 
-images are taken with the layer of skin towards the top and bone or deep tissue towards the 
-bottom. If we were to flip the image vertically, we would be introducing a transformation that 
-may not be appropriate where the skin was shown beneath bone and dense tissue. Therefore, we 
-have limited transformations only to introduce some image rotation by a slight angle, less than 
-ten degrees in either direction, zooming the image up to 1.5x magnification, and randomly 
-cropping the image to 224×224 pixels
-
-The second data augmentation method utilized was mixup (Zhang et al., 2017). This 
-method is a data-agnostic approach to augmentation and does not suffer from relying on domain 
-knowledge to apply relevant transformations. According to Zhang et al., this data augmentation 
-is also very powerful when the labels are not entirely accurate. This was extremely important for 
-our BUS images since many of the images have been classified by a human, which we know are 
-prone to errors. 
-
-### Models
-![image](https://user-images.githubusercontent.com/46795053/152703177-3459d9ca-f3d8-46c5-8f63-7f9e197b95f9.png)
-
-### Transfer Learning
-Starting from an initial randomized point for our models can result in inconsistent 
-training times and performance. Instead, we can choose to use starting parameters for our model 
-from pre-trained models. This method known as transfer learning uses the model weights and 
-biases from a model trained on a different task and utilizes them as an initial starting point for 
-our problem. We began our training with the weights and biases for the models trained 
-on the ImageNet dataset.
-
-Each model's final fully connected layer was removed since it was trained to output 
-classifications for a separate task. A new fully connected layer with two outputs, known as the 
-head of the model for our binary classification problem, was added. Because the initial weights 
-for this layer must be randomized, we began training by freezing the entire model, except for this 
-layer. Frozen layers of a model cannot be updated during training. By leaving the head unfrozen 
-this ensured only the weights and biases for the new classification layer were updated during the 
-beginning of training. After updating this layer for the set number of epochs, the entire model 
-was unfrozen, and all layers were updated during the rest of the training. 
-
-### Discriminative Learning Rates
-The early layers of our model will be used to detect simple features in our images, such 
-as edges, curves, and corners. These simple features are present in almost all images. Because 
-these layers will begin training with their pre-trained weights, they should require little change. 
-However, as we move deeper through the network layers, the model parameters will require 
-more change to reach an optimal solution because the complex features found for ImageNet will 
-be much different from those for BUS classification. Therefore, it does not seem reasonable that 
-all layers should be trained at the same learning rate. We used discriminative learning, which sets 
-a different learning rate for different depths of our networks. This ensures that our deeper layers 
-and our new head train much faster than the early layers, which should only require minor 
-updates. Ultimately, this should reduce our training time as the model learns the features 
-important to BUS classification more quickly. 
-
-### Scheduler
-It is often the case that the initial learning rate is not optimal throughout all the training. 
-For example, we may find a local minimum in our loss function, and our learning rate may not 
-allow us to leave this local area of our loss function. For our models, we implement cosine 
-annealing, following the 1-cycle policy defined by Smith (2018). Many other schedulers exist, 
-but the 1-cycle policy performs well as a universal scheduler and greatly reduces training time. 
-The 1-cycle policy works by increasing the learning rate from the starting learning rate to a 
-maximum learning rate and then lowering it again to zero over one cycle, typically chosen to be 
-slightly less than the total training epochs.
-
-# Model Interpretation
-When making a classification dealing with patient outcomes, radiologists must trust the 
-models' classification. Deep learning architectures often operate as black boxes, making it hard 
-to interpret why the classifications were made. To help interpret these models, we implemented 
-local interpretable model-agnostic explanations (LIME). LIME creates synthesized images from 
-a given image, using perturbations in the localized area of the image to see how that area affects 
-the probability associated with a classification. The areas of most importance are then found 
-using linear models such as weighted linear regression (Ribeiro et al., 2016).
+![Python](https://img.shields.io/badge/python-3.8+-blue.svg)
+![PyTorch](https://img.shields.io/badge/PyTorch-1.7+-EE4C2C.svg)
+![fastai](https://img.shields.io/badge/fastai-2.4-00A98F.svg)
+![Optuna](https://img.shields.io/badge/Optuna-TPE-blueviolet.svg)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+![Status](https://img.shields.io/badge/status-completed--2022-success.svg)
 
 ![image](https://user-images.githubusercontent.com/46795053/152703675-a13a24b9-3548-4356-9ffa-e0c0a9811605.png)
 
+---
+
+## Project Status
+
+This is a **completed 2022 academic capstone project**. It is preserved here as a portfolio artifact and is not under active development. The training pipeline (`src/train.py`) is config-driven and can be reused or extended for other image-classification problems with minor adjustments.
+
+## What This Project Demonstrates
+
+- **Transfer learning** with multiple pre-trained CNN backbones (ResNet, DenseNet, etc.) via fastai
+- **Domain-aware data augmentation** — geometric transforms constrained by ultrasound imaging conventions, plus MixUp for label-noise robustness
+- **Hyperparameter optimization** with Optuna's Tree-structured Parzen Estimator (TPE) and median pruning
+- **Modern training tricks**: discriminative learning rates, the 1-cycle scheduler (Smith, 2018), and progressive layer unfreezing
+- **Experiment tracking** with Neptune (study metadata, metrics, and visualization artifacts logged per run)
+- **Model interpretability** — both **LIME** (local surrogate explanations) and **GradCAM** (gradient-weighted class activation maps), so radiologists can audit *why* a prediction was made
+- **End-to-end reproducibility** — a single JSON config drives the entire training + tuning loop
+
+---
+
+## Results
+
+> Placeholder — fill in with best values from the Neptune study.
+
+| Architecture | AUC | Accuracy | Precision | Recall | F1 |
+| ------------ | --- | -------- | --------- | ------ | -- |
+| ResNet18     | TBD | TBD      | TBD       | TBD    | TBD |
+| ResNet50     | TBD | TBD      | TBD       | TBD    | TBD |
+| DenseNet201  | TBD | TBD      | TBD       | TBD    | TBD |
+| *Best model* | TBD | TBD      | TBD       | TBD    | TBD |
+
+**Best configuration found by TPE search:**
+- Learning rate: TBD
+- Weight decay: TBD
+- Batch size: TBD
+- Freeze epochs: TBD
+
+---
+
+## Repository Structure
+
+```
+CapstoneBUS/
+├── src/
+│   └── train.py                    # Config-driven training + TPE hyperparameter search
+├── configs/
+│   └── example.json                # Example hyperparameter + tuning config
+├── notebooks/
+│   ├── example.ipynb               # End-to-end usage walkthrough
+│   └── model_interpretation.ipynb  # LIME + GradCAM visualizations on a trained model
+├── results/                        # (Output) plots, confusion matrices, top-loss images
+├── requirements.txt
+├── LICENSE
+└── README.md
+```
+
+---
+
+## Quickstart
+
+### 1. Install
+```bash
+git clone https://github.com/hall4jm/CapstoneBUS.git
+cd CapstoneBUS
+pip install -r requirements.txt
+```
+
+A CUDA-enabled GPU is strongly recommended. The project was developed against `fastai==2.4` and PyTorch 1.7–1.10; pinning matters because of fastai breaking changes after 2.4.
+
+### 2. Prepare data
+Organize images using fastai's `GrandparentSplitter` convention:
+```
+data_dir/
+├── train/
+│   ├── Benign/
+│   └── Malignant/
+└── val/
+    ├── Benign/
+    └── Malignant/
+```
+
+### 3. Configure
+Edit [`configs/example.json`](configs/example.json) to point at your data and choose a backbone. The config has three sections:
+
+- **`environ`** — paths, study name, number of trials
+- **`hps`** — fixed hyperparameters (epochs, augmentation strength, image size, optimizer, backbone)
+- **`tune`** — hyperparameters explored by Optuna (LR, weight decay, momentum, batch size, freeze epochs), each with an Optuna distribution and bounds
+
+### 4. Add Neptune credentials
+In `src/train.py`, replace `<PROJECT_NAME>` and `<API_TOKEN>` with your Neptune project / token (or remove the Neptune block if you don't want experiment tracking).
+
+### 5. Run
+```bash
+python src/train.py -c configs/example.json
+```
+
+Outputs (per trial):
+- `models/<backbone>_trial_<n>.pkl` — exported learner
+- `img_dir/<backbone>_loss_trial_<n>.png` — training loss curve
+- `img_dir/<backbone>_sched_trial_<n>.png` — 1-cycle LR schedule
+- `img_dir/<backbone>_conf_matrix_trial_<n>.png` — confusion matrix
+- `img_dir/<backbone>_top_losses_trial_<n>.png` — top-loss examples
+
+The best trial's artifacts are uploaded to Neptune at the end of the study.
+
+### 6. Interpret a trained model
+Open [`notebooks/model_interpretation.ipynb`](notebooks/model_interpretation.ipynb), point it at an exported `.pkl`, and run the GradCAM / LIME cells to produce the saliency visualizations shown above.
+
+---
+
+## Background
+
+According to the WHO, breast cancer is now the most common form of cancer globally (Breast cancer now most common form of cancer: WHO taking action, 2021). Over 280,000 new cases were estimated in the United States in 2021 alone, resulting in more than 43,000 deaths (U.S. Breast Cancer Statistics, 2021). Early detection is the single most important factor in reducing mortality (Sun et al., 2017): when potentially life-threatening lesions are caught early, patients have access to the widest set of effective treatment options.
+
+To aid detection, doctors recommend regular mammograms and physical exams (Breast Cancer Early Detection and Diagnosis, 2021). Breast ultrasound (BUS) is a common alternative — non-radioactive, safe, non-invasive — and is often used to assess conspicuous masses without immediately resorting to biopsy.
+
+### Why automate BUS interpretation?
+
+Despite advances in imaging hardware, BUS interpretation still depends heavily on radiologist experience. Many BI-RADS features appear in both benign and malignant lesions, and the subjectivity of these characteristics leads to wildly varying assessments across radiologists. The positive-biopsy rate from BUS-driven referrals varies by as much as 51% between studies — meaning a large number of patients undergo unnecessary, invasive procedures.
+
+Deep learning has shown strong results on many medical-imaging classification tasks, but most of these models fail to generalize to clinical settings. This project's aim is to evaluate whether a modern CNN-based CAD system, trained with appropriate augmentation and interpretability tooling, can produce a more standardized BUS assessment.
+
+---
+
+## Methodology
+
+### Data Augmentation
+
+CNNs are prone to memorizing small training sets rather than learning generalizable features. Two complementary augmentation strategies were used.
+
+**1. Domain-aware geometric transforms.** Not every transformation makes sense for BUS imagery — these images are always captured with skin near the top and bone / deep tissue near the bottom, so a vertical flip would produce an image that violates the imaging protocol. Augmentations were restricted to:
+- Rotations up to ±10°
+- Zoom up to 1.5×
+- Random crop to 224×224
+
+**2. MixUp** (Zhang et al., 2017). A data-agnostic augmentation that linearly interpolates pairs of training images and their labels. MixUp is particularly powerful when labels are noisy — a real concern for BUS images, where the ground-truth labels were assigned by humans and are themselves subject to inter-rater variation.
+
+### Models
+
+Several pre-trained ImageNet backbones were evaluated:
+
+![image](https://user-images.githubusercontent.com/46795053/152703177-3459d9ca-f3d8-46c5-8f63-7f9e197b95f9.png)
+
+### Transfer Learning
+
+Training from scratch is unstable on small medical-imaging datasets. Instead, each model was initialized with ImageNet-pretrained weights, the final classification layer was replaced with a fresh 2-class head, and training proceeded in two phases:
+
+1. **Freeze + warm up the head.** Backbone weights are frozen; only the new classification head trains (for a number of epochs selected by Optuna).
+2. **Unfreeze and fine-tune.** All layers train, but at different learning rates (see below).
+
+### Discriminative Learning Rates
+
+Early layers of a CNN learn generic features (edges, curves, corners) that transfer well from ImageNet, while deeper layers learn task-specific features that need more adjustment. fastai's discriminative learning rates assign progressively higher learning rates to deeper layers, so the backbone barely moves while the head and late layers adapt aggressively. This shortens training without sacrificing the value of the pretrained weights.
+
+### Scheduler — 1-cycle policy
+
+A fixed learning rate is rarely optimal across all of training. This project uses **cosine annealing under the 1-cycle policy** (Smith, 2018), which ramps the LR up from a starting value to a peak and then back down to zero across a single cycle. The 1-cycle policy is a strong general-purpose scheduler and substantially reduces training time relative to constant or step-decay schedules.
+
+### Hyperparameter Search
+
+The full hyperparameter space is explored by **Optuna's Tree-structured Parzen Estimator (TPE)** sampler with **median pruning** (5 startup trials, 15 minimum trials before pruning). Tuned hyperparameters:
+
+- Learning rate (log-uniform, 1e-5 to 1e-1)
+- Weight decay (log-uniform, 1e-5 to 1e-1)
+- Momentum schedule (start / min / end momenta, ordered)
+- Batch size (8 to 64, step 8)
+- Freeze-phase epochs (0 to 25, step 5)
+
+The objective is binary ROC AUC on the validation set.
+
+---
+
+## Model Interpretation
+
+When a classification informs patient outcomes, radiologists need to trust *why* the model made a prediction. CNNs are notorious black boxes, so two interpretability methods were applied to the best-performing model:
+
+**LIME** (Ribeiro et al., 2016) builds a local surrogate model by perturbing super-pixels in the input image and observing how the prediction probability changes. The result is a saliency mask over the regions that drove the prediction.
+
+**GradCAM** uses the gradient of the predicted class with respect to the final convolutional feature maps, producing a class-discriminative heatmap that shows which spatial regions the network attended to.
+
+Both are implemented in [`notebooks/model_interpretation.ipynb`](notebooks/model_interpretation.ipynb).
+
+![image](https://user-images.githubusercontent.com/46795053/152703675-a13a24b9-3548-4356-9ffa-e0c0a9811605.png)
+
+---
+
+## Limitations & Future Work
+
+- **Small dataset.** BUS images are scarce relative to natural-image datasets; the augmentation strategy and MixUp partially compensate but do not eliminate the issue. A larger multi-institution dataset would strengthen the results.
+- **Binary classification only.** The model produces benign-vs-malignant predictions; clinical BI-RADS uses a 6-category scale. Extending to BI-RADS would require finer-grained labels.
+- **Single-image input.** Radiologists use multiple views and patient context. A multi-view or multi-modal extension is a natural next step.
+- **No external validation.** Performance is reported on a held-out validation split from the same dataset distribution. Generalization to other institutions' imaging hardware and protocols is not tested.
+- **Interpretation quality.** LIME and GradCAM provide post-hoc rationalizations rather than guaranteed-faithful explanations. Inherently interpretable architectures would be a stronger guarantee.
+
+---
+
+## References
+
+- Breast cancer now most common form of cancer: WHO taking action. (2021). World Health Organization.
+- U.S. Breast Cancer Statistics. (2021). Breastcancer.org.
+- Sun, Y. S., Zhao, Z., Yang, Z. N., Xu, F., Lu, H. J., Zhu, Z. Y., Shi, W., Jiang, J., Yao, P. P., & Zhu, H. P. (2017). Risk factors and preventions of breast cancer. *International Journal of Biological Sciences*, 13(11), 1387–1397.
+- Ribeiro, M. T., Singh, S., & Guestrin, C. (2016). "Why should I trust you?": Explaining the predictions of any classifier. *KDD '16*.
+- Smith, L. N. (2018). A disciplined approach to neural network hyper-parameters: Part 1 — learning rate, batch size, momentum, and weight decay. *arXiv:1803.09820*.
+- Zhang, H., Cisse, M., Dauphin, Y. N., & Lopez-Paz, D. (2017). mixup: Beyond empirical risk minimization. *arXiv:1710.09412*.
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE).
