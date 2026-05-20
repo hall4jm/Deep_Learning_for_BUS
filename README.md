@@ -29,25 +29,6 @@ This is a **completed 2022 academic capstone project**. It is preserved here as 
 
 ---
 
-## Results
-
-> Placeholder — fill in with best values from the Neptune study.
-
-| Architecture | AUC | Accuracy | Precision | Recall | F1 |
-| ------------ | --- | -------- | --------- | ------ | -- |
-| ResNet18     | TBD | TBD      | TBD       | TBD    | TBD |
-| ResNet50     | TBD | TBD      | TBD       | TBD    | TBD |
-| DenseNet201  | TBD | TBD      | TBD       | TBD    | TBD |
-| *Best model* | TBD | TBD      | TBD       | TBD    | TBD |
-
-**Best configuration found by TPE search:**
-- Learning rate: TBD
-- Weight decay: TBD
-- Batch size: TBD
-- Freeze epochs: TBD
-
----
-
 ## Repository Structure
 
 ```
